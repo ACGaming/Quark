@@ -39,6 +39,7 @@ import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import vazkii.arl.util.ItemNBTHelper;
+import vazkii.quark.base.Quark;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
 
@@ -126,7 +127,11 @@ public class BuriedTreasure extends Feature {
 		mapdata.dimension = 0;
 		mapdata.trackingPosition = true;
 		mapdata.unlimitedTracking = true;
-		ItemMap.renderBiomePreviewMap(world, itemstack);
+		try {
+			ItemMap.renderBiomePreviewMap(world, itemstack);
+		} catch (Exception e) {
+			Quark.LOG.error("Failed to render biome preview map", e);
+		}
 		MapData.addTargetDecoration(itemstack, treasurePos, "x", Type.TARGET_X);
 
 		mapdata.markDirty();
