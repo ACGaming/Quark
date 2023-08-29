@@ -5,7 +5,7 @@ buildscript {
         maven { url = "https://maven.minecraftforge.net" }
     }
     dependencies {
-        classpath('net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT')
+        classpath('com.anatawa12.forge:ForgeGradle:2.3-1.0.8')
     }
 }
 
@@ -37,12 +37,12 @@ repositories {
     maven {
         // for AutoRegLib
         name "blamejared"
-        url "http://maven.blamejared.com/"
+        url "https://maven.blamejared.com/"
     }
     maven {
         // for JEI
-        name = "promwml16"
-        url "http://dvs1.progwml6.com/files/maven"
+        name = "ModMaven"
+        url "https://modmaven.dev/"
     }
     maven {
         name = "CurseForge"
