@@ -40,13 +40,16 @@ repositories {
         url "https://maven.blamejared.com/"
     }
     maven {
-        // for JEI
         name "progwml6"
         url "https://dvs1.progwml6.com/files/maven"
     }
     maven {
         name "CurseForge"
         url "https://minecraft.curseforge.com/api/maven/"
+    }
+    maven {
+        name "Cleanroom Maven"
+        url "https://repo.cleanroommc.com/releases/"
     }
 }
 
@@ -61,7 +64,7 @@ dependencies {
     deobfCompile "vazkii.autoreglib:AutoRegLib:${config.arl_version}"
     // compile "baubles:Baubles:1.12:1.5.2" // w/ baubles
     compileOnly "baubles:Baubles:1.12:1.5.2" // w/o baubles
-    deobfCompile "mezz.jei:jei_${config.mc_version}:${config.jei_version}"
+    deobfCompile "mezz:jei:${config.jei_version}"
 }
 
 minecraft {
