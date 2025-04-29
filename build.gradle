@@ -32,7 +32,7 @@ if (System.getenv().BUILD_NUMBER != null) {
 repositories {
     mavenCentral()
     maven {
-        url= "https://oss.sonatype.org/content/repositories/public/"
+        url "https://oss.sonatype.org/content/repositories/public/"
     }
     maven {
         // for AutoRegLib
@@ -41,12 +41,12 @@ repositories {
     }
     maven {
         // for JEI
-        name = "ModMaven"
-        url "https://modmaven.dev/"
+        name "progwml6"
+        url "https://dvs1.progwml6.com/files/maven"
     }
     maven {
-        name = "CurseForge"
-        url = "https://minecraft.curseforge.com/api/maven/"
+        name "CurseForge"
+        url "https://minecraft.curseforge.com/api/maven/"
     }
 }
 
