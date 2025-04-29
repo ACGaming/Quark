@@ -30,6 +30,7 @@ public class QuarkClient extends Module {
 		registerFeature(new EnchantedBooksShowItems());
 		registerFeature(new ShowInvalidSlots());
 		registerFeature(new RenderItemsInChat());
+		registerFeature(new GlowingItems(), false);
 	}
 	
 	@Override

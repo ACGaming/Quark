@@ -66,7 +66,6 @@ public class ProxiedItemStackHandler implements IItemHandlerModifiable, ICapabil
 	public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
 		validateSlotIndex(slot);
 		writeStack(slot, stack);
-		onContentsChanged(slot);
 	}
 
 	@Override
@@ -84,59 +83,48 @@ public class ProxiedItemStackHandler implements IItemHandlerModifiable, ICapabil
 	@Override
 	@Nonnull
 	public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-		if (stack.isEmpty())
-			return ItemStack.EMPTY;
-
 		validateSlotIndex(slot);
+		if (stack.isEmpty()) return stack;
 
 		ItemStack existing = readStack(slot);
+		if (!existing.isEmpty() && !ItemHandlerHelper.canItemStacksStack(existing, stack)) return stack;
 
-		int limit = getStackLimit(slot, stack);
+		int toTransfer = Math.min(stack.getCount(), getStackLimit(slot, existing) - existing.getCount());
+		if (toTransfer <= 0) return stack;
+		int remainingCount = stack.getCount() - toTransfer;
 
-		if (!existing.isEmpty()) {
-			if (!ItemHandlerHelper.canItemStacksStack(stack, existing))
-				return stack;
-
-			limit -= existing.getCount();
+		if (simulate) { // awkward, but avoids copying the stack if we don't need to
+			if (remainingCount <= 0) return ItemStack.EMPTY;
+			stack = stack.copy();
+		} else {
+			stack = stack.copy();
+			stack.setCount(existing.getCount() + toTransfer);
+			writeStack(slot, stack); // writes a copy
+			if (remainingCount <= 0) return ItemStack.EMPTY;
 		}
-
-		if (limit <= 0)
-			return stack;
-
-		boolean reachedLimit = stack.getCount() > limit;
-
-		if (!simulate)
-			writeStack(slot, reachedLimit ? ItemHandlerHelper.copyStackWithSize(stack, limit) : stack);
-
-		return reachedLimit ? ItemHandlerHelper.copyStackWithSize(stack, stack.getCount() - limit) : ItemStack.EMPTY;
+		stack.setCount(remainingCount); // if we reach this line, the stack must have been copied
+		return stack;
 	}
 
 	@Override
 	@Nonnull
 	public ItemStack extractItem(int slot, int amount, boolean simulate) {
-		if (amount == 0)
-			return ItemStack.EMPTY;
-
 		validateSlotIndex(slot);
+		if (amount <= 0) return ItemStack.EMPTY;
 
-		ItemStack existing = readStack(slot);
+		ItemStack existing = readStack(slot); // reads a copy
+		if (existing.isEmpty()) return ItemStack.EMPTY;
 
-		if (existing.isEmpty())
-			return ItemStack.EMPTY;
-
-		int toExtract = Math.min(amount, existing.getMaxStackSize());
-
-		if (existing.getCount() <= toExtract) {
-			if (!simulate)
-				writeStack(slot, ItemStack.EMPTY);
-
-			return existing;
+		if (amount >= existing.getCount()) {
+			if (!simulate) writeStack(slot, ItemStack.EMPTY);
 		} else {
-			if (!simulate)
-				writeStack(slot, ItemHandlerHelper.copyStackWithSize(existing, existing.getCount() - toExtract));
-
-			return ItemHandlerHelper.copyStackWithSize(existing, toExtract);
+			if (!simulate) {
+				existing.setCount(existing.getCount() - amount);
+				writeStack(slot, existing); // writes a copy
+			}
+			existing.setCount(amount);
 		}
+		return existing;
 	}
 
 	@Override

@@ -57,6 +57,7 @@ public class TotemOfHolding extends Feature {
 	
 	public static boolean darkSoulsMode, enableOnPK, destroyItems, anyoneCollect, enableSoulCompass, shouldBlacklistBeWhitelist, enableTotemItem;
 	public static float entityScale;
+	public static double glowRange;
 
 	private static String[] tempBlacklist;
 	public static Set<Pair<Item, Integer>> holdingBlacklist;
@@ -79,6 +80,7 @@ public class TotemOfHolding extends Feature {
 		tempSavingItem = loadPropString("Saving Item", "An item that must be in the player inventory for the totem to work. Set to 'none' to disable", "quark:totem_of_holding");
 		enableTotemItem = loadPropBool("Enable Totem of Holding Item", "", true);
 		entityScale = (float) loadPropDouble("Totem of Holding Entity Scale", "Displayed scale of the totem of holding entity", 1.0D);
+		glowRange = loadPropDouble("Totem Glow Range", "Maximum range at which totems visibly glow. Default is 32; set to 0 to disable", 32);
 	}
 	
 	@Override
@@ -213,6 +215,12 @@ public class TotemOfHolding extends Feature {
 		}
 		
 		return new BlockPos(0, -1, 0);
+	}
+
+	@SideOnly(Side.CLIENT)
+	public static boolean isOutlineActive(Entity entity, Entity viewer) {
+		return glowRange > 0 && entity instanceof EntityTotemOfHolding
+				&& viewer.getDistanceSq(entity) <= glowRange * glowRange;
 	}
 	
 	@Override

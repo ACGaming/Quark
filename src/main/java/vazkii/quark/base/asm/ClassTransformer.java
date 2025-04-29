@@ -12,6 +12,7 @@ package vazkii.quark.base.asm;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
+import net.minecraftforge.fml.relauncher.FMLLaunchHandler;
 import org.apache.logging.log4j.LogManager;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
@@ -111,6 +112,10 @@ public class ClassTransformer implements IClassTransformer, Opcodes {
 
 		// For Parrot Eggs
 		transformers.put("net.minecraft.client.renderer.entity.layers.LayerEntityOnShoulder", ClassTransformer::transformLayerEntityOnShoulder);
+
+		// For Glowing Totems
+		transformers.put("net.minecraft.client.renderer.RenderGlobal", ClassTransformer::transformRenderGlobal);
+		transformers.put("meldexun.renderlib.renderer.entity.EntityRenderer", ClassTransformer::transformRenderLibEntityRenderer); // RenderLib compat hack
 	}
 
 	@Override
@@ -977,6 +982,63 @@ public class ClassTransformer implements IClassTransformer, Opcodes {
 		));
 	}
 
+	private static byte[] transformRenderGlobal(byte[] basicClass) {
+		MethodSignature sig = new MethodSignature("isOutlineActive", "func_184383_a", "(Lnet/minecraft/entity/Entity;Lnet/minecraft/entity/Entity;Lnet/minecraft/client/renderer/culling/ICamera;)Z");
+
+		return transform(basicClass, forMethod(sig,
+				(MethodNode method) -> { // Action
+					InsnList newInstructions = new InsnList();
+
+					LabelNode jump = new LabelNode();
+
+					newInstructions.add(new VarInsnNode(ALOAD, 1));
+					newInstructions.add(new VarInsnNode(ALOAD, 2));
+					newInstructions.add(new MethodInsnNode(INVOKESTATIC, ASM_HOOKS, "isOutlineActive", "(Lnet/minecraft/entity/Entity;Lnet/minecraft/entity/Entity;)Z", false));
+					newInstructions.add(new JumpInsnNode(IFEQ, jump));
+					newInstructions.add(new InsnNode(ICONST_1));
+					newInstructions.add(new InsnNode(IRETURN));
+					newInstructions.add(jump);
+
+					method.instructions.insertBefore(method.instructions.getFirst(), newInstructions);
+					return true;
+				}
+		));
+	}
+
+	private static byte[] transformRenderLibEntityRenderer(byte[] basicClass) {
+		MethodSignature sig = new MethodSignature("shouldRenderOutlines", "shouldRenderOutlines", "(Lnet/minecraft/entity/Entity;)Z");
+
+		MethodSignature target = new MethodSignature("getMinecraft", "func_71410_x", "()Lnet/minecraft/client/Minecraft;");
+		return transform(basicClass, forMethod(sig, combine(
+				(AbstractInsnNode node) -> { // Filter
+					return node.getOpcode() == INVOKESTATIC && target.matches((MethodInsnNode) node);
+				},
+				(MethodNode method, AbstractInsnNode node) -> { // Action
+					AbstractInsnNode storeInsn = node.getNext();
+					if (!(storeInsn.getOpcode() == ASTORE)) return false;
+					int mcVar = ((VarInsnNode) storeInsn).var;
+
+					InsnList newInstructions = new InsnList();
+
+					LabelNode jump = new LabelNode();
+
+					newInstructions.add(new VarInsnNode(ALOAD, 1));
+					newInstructions.add(new VarInsnNode(ALOAD, mcVar));
+					newInstructions.add(new FieldInsnNode(GETFIELD, "net/minecraft/client/Minecraft",
+							FMLLaunchHandler.isDeobfuscatedEnvironment() ? "player" : "field_71439_g",
+							"Lnet/minecraft/client/entity/EntityPlayerSP;"));
+					newInstructions.add(new MethodInsnNode(INVOKESTATIC, ASM_HOOKS, "isOutlineActive", "(Lnet/minecraft/entity/Entity;Lnet/minecraft/entity/Entity;)Z", false));
+					newInstructions.add(new JumpInsnNode(IFEQ, jump));
+					newInstructions.add(new InsnNode(ICONST_1));
+					newInstructions.add(new InsnNode(IRETURN));
+					newInstructions.add(jump);
+
+					method.instructions.insert(storeInsn, newInstructions);
+					return true;
+				}
+		)));
+	}
+
 	// BOILERPLATE BELOW ==========================================================================================================================================
 
 	private static boolean debugLog = false;
@@ -1000,7 +1062,7 @@ public class ClassTransformer implements IClassTransformer, Opcodes {
 			didAnything |= pair.test(node);
 
 		if (didAnything) {
-			ClassWriter writer = new SafeClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+			ClassWriter writer = new SafeClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, Launch.classLoader);
 			if (debugLog)
 				log(getNodeString(node));
 			debugLog = false;
@@ -1137,44 +1199,6 @@ public class ClassTransformer implements IClassTransformer, Opcodes {
 
 		public boolean matches(MethodInsnNode method) {
 			return matches(method.name, method.desc);
-		}
-	}
-	/**
-	 * Safe class writer.
-	 * The way COMPUTE_FRAMES works may require loading additional classes. This can cause ClassCircularityErrors.
-	 * The override for getCommonSuperClass will ensure that COMPUTE_FRAMES works properly by using the right ClassLoader.
-	 * <p>
-	 * Code from: https://github.com/JamiesWhiteShirt/clothesline/blob/master/src/core/java/com/jamieswhiteshirt/clothesline/core/SafeClassWriter.java
-	 */
-	public static class SafeClassWriter extends ClassWriter {
-		public SafeClassWriter(int flags) {
-			super(flags);
-		}
-
-		@Override
-		protected String getCommonSuperClass(String type1, String type2) {
-			Class<?> c, d;
-			ClassLoader classLoader = Launch.classLoader;
-			try {
-				c = Class.forName(type1.replace('/', '.'), false, classLoader);
-				d = Class.forName(type2.replace('/', '.'), false, classLoader);
-			} catch (Exception e) {
-				throw new RuntimeException(e.toString());
-			}
-			if (c.isAssignableFrom(d)) {
-				return type1;
-			}
-			if (d.isAssignableFrom(c)) {
-				return type2;
-			}
-			if (c.isInterface() || d.isInterface()) {
-				return "java/lang/Object";
-			} else {
-				do {
-					c = c.getSuperclass();
-				} while (!c.isAssignableFrom(d));
-				return c.getName().replace('.', '/');
-			}
 		}
 	}
 

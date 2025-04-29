@@ -1,12 +1,10 @@
 package vazkii.quark.oddities.inventory;
 
-import baubles.api.BaublesApi;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.*;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fml.common.Loader;
-import vazkii.arl.util.InventoryIIH;
+import net.minecraftforge.items.IItemHandlerModifiable;
 import vazkii.quark.oddities.feature.Backpacks;
 
 import javax.annotation.Nonnull;
@@ -24,19 +22,9 @@ public class ContainerBackpack extends ContainerPlayer {
 		Slot anchor = inventorySlots.get(9);
 		int left = anchor.xPos;
 		int top = anchor.yPos - 58;
-		
-		ItemStack backpack;
-		if (Loader.isModLoaded("baubles"))
-			backpack = BaublesApi.getBaublesHandler(player).getStackInSlot(5);
-		else
-			backpack = player.inventory.armorInventory.get(2);
 
-		if (backpack != null && backpack.getItem() != Backpacks.backpack)
-			backpack = null;
-
-		if (backpack != null) {
-			InventoryIIH inv = new InventoryIIH(backpack);
-			
+		IItemHandlerModifiable inv = Backpacks.getBackpackInventory(player);
+		if (inv != null) {
 			for (int i = 0; i < 3; ++i) {
 				for (int j = 0; j < 9; ++j) {
 					int k = j + i * 9;
